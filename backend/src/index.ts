@@ -2,7 +2,13 @@ import express from 'express'
 import 'dotenv/config'
 import WebSocket, { WebSocketServer } from 'ws'
 import { v4 } from 'uuid'
-import { Dungeon } from './game'
+import questions from './questions.json'
+
+interface Question {
+  question: string,
+  correct: string,
+  answers: object
+}
 
 interface Game {
   id: string,
@@ -10,12 +16,15 @@ interface Game {
   players: Player[],
   created: number,
   owner: Player,
-  dungeon: Dungeon | undefined
+  question: Question,
+  started: boolean
 }
 
 export interface Player {
   id: string,
-  name: string
+  name: string,
+  points: number,
+  answered: boolean
 }
 
 const port = process.env.SERVER_PORT as any || 8080
@@ -53,7 +62,9 @@ wss.on('connection', (ws) => {
   const id = v4()
   const player = {
     id: id,
-    name: "Player"
+    name: "Player",
+    points: 0,
+    answered: false
   }
   clients.set(ws, player)
 
@@ -83,7 +94,8 @@ wss.on('connection', (ws) => {
           players: [clients.get(ws) as Player],
           created: Date.now(),
           owner: clients.get(ws) as Player,
-          dungeon: undefined
+          question: questions[Math.floor(Math.random() * questions.length)],
+          started: false
         }
         games.push(game)
         const message = {
@@ -104,6 +116,15 @@ wss.on('connection', (ws) => {
             error: 'You are not the owner of this game or you are not in a game'
           }))
         }
+        g.started = true
+        const message = {
+          action: "GAME_UPDATE",
+          game: g,
+          question: g.question
+        }
+        g.players.forEach((player: any) => {
+          (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
+        })
         //g.dungeon!!.getText()
       } else if (data.action == "JOIN") {
         if (data.invite == null) {

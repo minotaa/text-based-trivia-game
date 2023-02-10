@@ -1,0 +1,12 @@
+[
+  {
+    "question": "Who is the 23rd president?",
+    "answers": {
+      "1": "Funny Valentine",
+      "2": "Benjamin Harrison",
+      "3": "Grover Cleveland",
+      "4": "William McKinley"
+    },
+    "correct": "2"
+  }
+]
