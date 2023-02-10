@@ -8,5 +8,15 @@
       "4": "William McKinley"
     },
     "correct": "2"
+  },
+  {
+    "question": "What is the greek plural for \"octopus\"?",
+    "answers": {
+      "1": "Octopodes",
+      "2": "Octopi",
+      "3": "Octopuses",
+      "4": "Octopod"
+    },
+    "correct": "1"
   }
 ]
