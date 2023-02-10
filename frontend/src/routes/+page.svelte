@@ -6,6 +6,7 @@
   let socket
   let id
   let disconnected
+  let answers
   onMount(() => {
     socket = new WebSocket("ws://localhost:3000")
     socket.addEventListener("open", ()=> {
@@ -24,6 +25,9 @@
         game = data.game
       } else if (data.action == 'REGISTER_GAME') {
         id = data.id
+      } else if (data.action == 'GAME_UPDATE') {
+        game = data.game
+        answers = Object.keys(game.question.answers)
       }
     })
     socket.addEventListener("close", (e) => {
@@ -74,7 +78,14 @@
     }))
   }
 
-  let started
+  function submitAnswer(answer) {
+    socket.send(JSON.stringify({
+      action: 'SUBMIT_ANSWER',
+      answer: answer,
+      
+    }))
+  }
+
     /**
    * @param {any} event
    */
@@ -82,16 +93,15 @@
     socket.send(JSON.stringify({
       action: 'START_GAME'
     }))
-    started = true
   }
 </script> 
 
 <main class="pt-4 pl-4">
   <h1 class="font-bold text-2xl">
-    text-based party game
+    small trivia game
   </h1>
   <h2 class='text-xl'>
-    by <a rel="noreferrer" target="_blank" href="https://github.com/minotaa" class="text-sky-400">minota</a> & <a rel="noreferrer" target="_blank" href="https://github.com/Sensetsu" class="text-sky-400">sensetsu</a>
+    by <a rel="noreferrer" target="_blank" href="https://github.com/minotaa" class="hover:underline text-sky-400">minota</a>
   </h2>
   {#if disconnected == null}
     {#if game == null}
@@ -112,7 +122,7 @@
       </button>
     {:else} 
       <h2 class="text-xl mt-2">invite code: <code class="font-mono font-bold">{game.invite}</code></h2>
-      {#if started == null || started == false}
+      {#if game.started == false}
         <h2 class="text-xl mb-2">players:</h2>
         <ul>
           {#each game.players as player}
@@ -129,6 +139,24 @@
             start game
           </button>
         {/if}
+      {:else}
+          <h2 class="text-xl mt-2">question: <strong>{game.question.question}</strong></h2>
+          {#each answers as answer}
+            <button on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
+              {game.question.answers[answer]}
+            </button>
+          {/each}
+          <h2 class="text-xl mb-2 mt-2">players:</h2>
+          <ul>
+            {#each game.players as player}
+              {#if player.answered === true}
+                <li class="font-bold font-mono text-base rounded-lg list-disc list-inside">{player.name} (✓) [{player.points} pts]</li>
+              {:else}
+                <li class="font-bold font-mono text-base rounded-lg list-disc list-inside">{player.name} [{player.points} pts]</li>
+              {/if}
+            {/each}
+            <li></li>
+          </ul>
       {/if}
     {/if}
   {:else}
