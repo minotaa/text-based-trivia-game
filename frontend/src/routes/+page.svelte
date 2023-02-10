@@ -78,12 +78,13 @@
     }))
   }
 
+  let answered = false
   function submitAnswer(answer) {
     socket.send(JSON.stringify({
       action: 'SUBMIT_ANSWER',
-      answer: answer,
-      
+      answer: answer
     }))
+    answered = true
   }
 
     /**
@@ -142,6 +143,7 @@
       {:else}
           <h2 class="text-xl mt-2">question: <strong>{game.question.question}</strong></h2>
           {#each answers as answer}
+            {#if player.answered == true}
             <button on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
               {game.question.answers[answer]}
             </button>

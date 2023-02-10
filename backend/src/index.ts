@@ -24,7 +24,8 @@ export interface Player {
   id: string,
   name: string,
   points: number,
-  answered: boolean
+  answered: boolean,
+  answer: string | undefined
 }
 
 const port = process.env.SERVER_PORT as any || 8080
@@ -64,7 +65,8 @@ wss.on('connection', (ws) => {
     id: id,
     name: "Player",
     points: 0,
-    answered: false
+    answered: false,
+    answer: undefined
   }
   clients.set(ws, player)
 
@@ -173,6 +175,29 @@ wss.on('connection', (ws) => {
           action: 'NAME_CHANGED',
           new_name: data.name
         }))
+      } else if (data.action == 'SUBMIT_ANSWER') {
+        console.log(`Received an answer: ${data.answer}`);
+        (clients.get(ws) as Player).answered = true;
+        (clients.get(ws) as Player).answer = data.answer;
+        let g
+        for (const game of games) {
+          if (game.owner === clients.get(ws) as Player) {
+            g = game
+          }
+        }
+        if (g == null) {
+          return ws.send(JSON.stringify({
+            error: 'You are not in a game'
+          }))
+        }
+        const message = {
+          action: "GAME_UPDATE",
+          game: g,
+          player: clients.get(ws)
+        }
+        g.players.forEach((player: any) => {
+          (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
+        })
       }
     } catch (e) {
       ws.send(JSON.stringify({
