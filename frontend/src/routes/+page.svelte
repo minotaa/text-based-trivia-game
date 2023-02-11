@@ -161,29 +161,37 @@
           </button>
         {/if}
       {:else}
-          <h2 class="text-xl mt-2">question: <strong>{game.question.question}</strong></h2>
-          {#each answers as answer}
-            {#if player.answered == false}
-              <button on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
-                {game.question.answers[answer]}
-              </button>
-            {:else}
-              <button disabled on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-700 text-white shadow p-2 rounded">
-                {game.question.answers[answer]}
-              </button>
-            {/if}
-          {/each}
-          <h2 class="text-xl mb-2 mt-2">players:</h2>
-          <ul>
-            {#each game.players as player}
-              {#if player.answered === true}
-                <li class="font-bold font-mono text-base rounded-lg list-disc list-inside">{player.name} (✓) [{player.points} pts]</li>
+          {#if game.state == "INQUESTION"}
+
+            <h2 class="text-xl mt-2">question: <strong>{game.question.question}</strong></h2>
+            <h2 class="text-xl mt-2">time left: <strong>{game.timer}s</strong></h2>
+            {#each answers as answer}
+              {#if player.answered == false}
+                <button on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
+                  {game.question.answers[answer]}
+                </button>
               {:else}
-                <li class="font-bold font-mono text-base rounded-lg list-disc list-inside">{player.name} [{player.points} pts]</li>
+                <button disabled on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-700 text-white shadow p-2 rounded">
+                  {game.question.answers[answer]}
+                </button>
               {/if}
             {/each}
-            <li></li>
-          </ul>
+            <h2 class="text-xl mb-2 mt-2">players:</h2>
+            <ul>
+              {#each game.players as player}
+                {#if player.answered === true}
+                  <li class="font-bold font-mono text-base rounded-lg list-disc list-inside">{player.name} (✓) [{player.points} pts]</li>
+                {:else}
+                  <li class="font-bold font-mono text-base rounded-lg list-disc list-inside">{player.name} [{player.points} pts]</li>
+                {/if}
+              {/each}
+              <li></li>
+            </ul>
+          {:else if game.state == "RESULTS"}
+            <h2 class="text-xl mt-2">result: <strong>{player.answer == game.question.correct ? "correct" : "incorrect"}</strong></h2>
+            <h2 class="text-xl">you earn: <strong>{player.lastEarnings} pts</strong></h2>
+            <h2 class="text-xl">next question in <strong>{game.timer}s</strong></h2>
+          {/if}
       {/if}
     {/if}
   {:else}
