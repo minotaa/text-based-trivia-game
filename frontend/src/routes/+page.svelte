@@ -7,6 +7,14 @@
   let id
   let disconnected
   let answers
+  let player
+
+  function getPlayer() {
+    socket.send(JSON.stringify({
+      action: 'GET_PLAYER'
+    }))
+  }
+
   onMount(() => {
     socket = new WebSocket("ws://localhost:8080")
     socket.addEventListener("open", ()=> {
@@ -17,17 +25,26 @@
       console.log(data)
       if (data.action == 'CREATION') {
         game = data.game
+        getPlayer()
       } else if (data.action == 'PLAYER_JOIN') {
         game = data.game
+        getPlayer()
       } else if (data.action == 'PLAYER_LEAVE') {
         game = data.game
+        getPlayer()
       } else if (data.action == 'OWNER_CHANGE') {
         game = data.game
+        getPlayer()
       } else if (data.action == 'REGISTER_GAME') {
         id = data.id
+        getPlayer()
       } else if (data.action == 'GAME_UPDATE') {
         game = data.game
         answers = Object.keys(game.question.answers)
+        getPlayer()
+      } else if (data.action == 'PLAYER') {
+        player = data.player
+        console.log(player)
       }
     })
     socket.addEventListener("close", (e) => {
@@ -135,6 +152,9 @@
           {/each}
           <li></li>
         </ul>
+        {#if game.timer > 0 && game.state == "STARTING"}
+          <h2 class="text-xl mt-2">starting in: <strong>{game.timer}</strong></h2>
+        {/if}
         {#if game.players.length > 1 && game.owner.id == id}
           <button on:click={handleStartGame} type="submit" class="mt-4 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
             start game
@@ -143,10 +163,15 @@
       {:else}
           <h2 class="text-xl mt-2">question: <strong>{game.question.question}</strong></h2>
           {#each answers as answer}
-            {#if player.answered == true}
-            <button on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
-              {game.question.answers[answer]}
-            </button>
+            {#if player.answered == false}
+              <button on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-600 hover:bg-green-700 duration-300 text-white shadow p-2 rounded">
+                {game.question.answers[answer]}
+              </button>
+            {:else}
+              <button disabled on:click={submitAnswer(answer)} type="submit" class="mt-4 mr-2 bg-green-700 text-white shadow p-2 rounded">
+                {game.question.answers[answer]}
+              </button>
+            {/if}
           {/each}
           <h2 class="text-xl mb-2 mt-2">players:</h2>
           <ul>

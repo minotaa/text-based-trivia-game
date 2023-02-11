@@ -3,6 +3,7 @@ import 'dotenv/config'
 import WebSocket, { WebSocketServer } from 'ws'
 import { v4 } from 'uuid'
 import questions from './questions.json'
+import { clearInterval } from 'timers'
 
 interface Question {
   question: string,
@@ -17,7 +18,9 @@ interface Game {
   created: number,
   owner: Player,
   question: Question,
-  started: boolean
+  started: boolean,
+  state: string, // "LOBBY" | "INQUESTION" | "STARTING"
+  timer: number
 }
 
 export interface Player {
@@ -59,6 +62,37 @@ function getClientFromId(map: Map<any,any>, searchValue: any) {
   }
 }
 
+function startTimer(game: Game, type: string) {
+  if (type === 'STARTING') {
+    game.timer = 5
+    const timer = setInterval(() => {
+      if (game.timer < 0) {
+        game.started = true
+        game.state = "INQUESTION"
+        const message = {
+          action: "GAME_UPDATE",
+          game: game
+        }
+        game.players.forEach(player => {
+          (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
+        })
+        clearInterval(timer)
+        return
+      }
+      const message = {
+        action: "GAME_UPDATE",
+        game: game
+      }
+      game.players.forEach(player => {
+        (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
+      })
+      game.timer -= 1
+    }, 1000)
+  } else if (type === "INQUESTION") {
+    
+  }
+}
+
 wss.on('connection', (ws) => {
   const id = v4()
   const player = {
@@ -97,7 +131,9 @@ wss.on('connection', (ws) => {
           created: Date.now(),
           owner: clients.get(ws) as Player,
           question: questions[Math.floor(Math.random() * questions.length)],
-          started: false
+          started: false,
+          state: "LOBBY",
+          timer: 0
         }
         games.push(game)
         const message = {
@@ -118,12 +154,18 @@ wss.on('connection', (ws) => {
             error: 'You are not the owner of this game or you are not in a game'
           }))
         }
-        g.started = true
+        if (g.state == "STARTING") {
+          return ws.send(JSON.stringify({
+            error: 'This game is already starting'
+          }))
+        }
+        g.state = "STARTING"
         const message = {
           action: "GAME_UPDATE",
           game: g,
           question: g.question
         }
+        startTimer(g, g.state)
         g.players.forEach((player: any) => {
           (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
         })
@@ -142,7 +184,7 @@ wss.on('connection', (ws) => {
         }
         for (const game of games) {
           if (game.players.includes(clients.get(ws) as Player)) {
-            return ws.send(JSON.stringify({
+            return ws.send(JSON.stringify({ 
               error: `You're already in a game.`,
               game: game
             }))
@@ -177,6 +219,11 @@ wss.on('connection', (ws) => {
         }))
       } else if (data.action == 'SUBMIT_ANSWER') {
         console.log(`Received an answer: ${data.answer}`);
+        if ((clients.get(ws) as Player).answered) {
+          return ws.send(JSON.stringify({
+            error: 'You already answered'
+          }))
+        }
         (clients.get(ws) as Player).answered = true;
         (clients.get(ws) as Player).answer = data.answer;
         let g
@@ -198,6 +245,12 @@ wss.on('connection', (ws) => {
         g.players.forEach((player: any) => {
           (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
         })
+      } else if (data.action == "GET_PLAYER") {
+        const message = {
+          action: "PLAYER",
+          player: clients.get(ws) as Player
+        }
+        ws.send(JSON.stringify(message))
       }
     } catch (e) {
       ws.send(JSON.stringify({
