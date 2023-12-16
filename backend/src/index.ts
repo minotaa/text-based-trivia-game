@@ -125,9 +125,6 @@ function startTimer(game: Game, type: string) {
         player.lastEarnings = Math.floor(500 + (500 * (player.secondsLeftWhenAnswered / 15)))
         player.points = player.points + player.lastEarnings
       }
-      player.answered = false
-      player.answer = undefined
-      player.lastEarnings = 0
     })
     const timer = setInterval(() => {
       if (game.timer < 0) {
@@ -140,6 +137,9 @@ function startTimer(game: Game, type: string) {
         }
         game.players.forEach(player => {
           (getClientFromId(clients, player) as WebSocket.WebSocket).send(JSON.stringify(message));
+          player.answered = false
+          player.answer = undefined
+          player.lastEarnings = 0
         })
         startTimer(game, game.state)
         clearInterval(timer)
@@ -292,12 +292,14 @@ wss.on('connection', (ws) => {
         }
         (clients.get(ws) as Player).answered = true;
         (clients.get(ws) as Player).answer = data.answer;
-        let g
+        let g: Game
         for (const game of games) {
-          if (game.owner === clients.get(ws) as Player) {
-            g = game
-          }
-        }
+          game.players.forEach(player => {
+            if (player.id == (clients.get(ws) as Player).id) {
+              g = game
+            }
+          })
+        } // @ts-ignore
         if (g == null) {
           return ws.send(JSON.stringify({
             error: 'You are not in a game'
@@ -305,7 +307,7 @@ wss.on('connection', (ws) => {
         }
         (clients.get(ws) as Player).secondsLeftWhenAnswered = g.timer
         if (g.players.every(player => player.answered === true)) {
-          g.timer = 1
+          g.timer = 0
         }
         const message = {
           action: "GAME_UPDATE",
